@@ -22,12 +22,16 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
+import org.mongojack.DBQuery.Query;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -37,6 +41,7 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.mongodb.DBCollection;
 
 public class TestQuerySerialization extends MongoDBTestBase {
 
@@ -64,6 +69,17 @@ public class TestQuerySerialization extends MongoDBTestBase {
                         .toArray(), hasSize(1));
     }
 
+    @Test @Ignore // This test needs to be fixed
+    public void testIn_collectionOfStrings() {
+        DBCollection c1 = getCollection("blah_" + Math.round(Math.random() * 10000d));
+        JacksonDBCollection<MockObjectWithList, String> c2 = JacksonDBCollection.wrap(c1, MockObjectWithList.class, String.class);
+        List<String> x = new ArrayList<String>();
+        x.add("a");
+        x.add("b");
+        Query q = DBQuery.in("simpleList", x);
+        c2.find(q);
+    }
+    
     @Test
     public void testLessThan() {
         MockObject o = new MockObject();
@@ -128,7 +144,7 @@ public class TestQuerySerialization extends MongoDBTestBase {
                 hasSize(1));
     }
 
-    public static class MockObject {
+    static class MockObject {
         @ObjectId
         @Id
         public String id;
@@ -140,7 +156,32 @@ public class TestQuerySerialization extends MongoDBTestBase {
         public List<MockObject> items;
     }
 
-    public static class PlusTenSerializer extends JsonSerializer<Integer> {
+    static class MockObjectWithList {
+
+        @Id
+        private String _id;
+
+        @JsonProperty
+        private List<String> simpleList;
+
+        public String get_id() {
+            return _id;
+        }
+
+        public void set_id(String _id) {
+            this._id = _id;
+        }
+
+        public List<String> getSimpleList() {
+            return simpleList;
+        }
+
+        public void setSimpleList(List<String> simpleList) {
+            this.simpleList = simpleList;
+        }
+    }
+
+    static class PlusTenSerializer extends JsonSerializer<Integer> {
         @Override
         public void serialize(Integer value, JsonGenerator jgen,
                 SerializerProvider provider) throws IOException,
@@ -149,7 +190,7 @@ public class TestQuerySerialization extends MongoDBTestBase {
         }
     }
 
-    public static class MinusTenDeserializer extends JsonDeserializer<Integer> {
+    static class MinusTenDeserializer extends JsonDeserializer<Integer> {
         @Override
         public Integer deserialize(JsonParser jp, DeserializationContext ctxt)
                 throws IOException, JsonProcessingException {
